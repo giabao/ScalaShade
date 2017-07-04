@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -83,7 +84,30 @@ class ScalaSigClass {
             //noinspection unchecked
             for (AnnotationNode an : visibleAnnotations(_clazz)) {
                 if (an.desc.equals("Lscala/reflect/ScalaLongSignature;")) {
-                    throw new CtxException("Found *long* ScalaSignature, these are not currently supported");
+                	//System.out.println(an.values.get(0));
+                	//System.out.println(an.values.get(1).getClass());
+                	if (sigAnnotation != -1)
+                        throw new CtxException("Multiple ScalaSignature annotations found in: " + path);
+                    if (an.values.size() != 2)
+                        throw new CtxException("ScalaSignature has wrong number of values in: " + path);
+                    if (!(an.values.get(0) instanceof String))
+                        throw new CtxException("ScalaSignature has wrong type for value 0 in: " + path);
+                    if (!(an.values.get(1) instanceof List))
+                        throw new CtxException("ScalaSignature has wrong type for value 1 in: " + path);
+                    if (!an.values.get(0).equals("bytes"))
+                        throw new CtxException("ScalaSignature has wrong first value in" + path);
+                    List<String> parts = (List<String>) an.values.get(1);
+                    String sigString = "";
+                    for(String part : parts){
+                    	System.out.println(part.length());
+                    	sigString += part;
+                    }
+
+                    byte[] sigBytes = Encoding.decode(sigString);
+                    if (sigBytes == null)
+                        throw new CtxException("ScalaSignature could not be decoded in" + path);
+                    sig = ScalaSig.parse(sigBytes);
+                    sigAnnotation = at;
                 } else if (an.desc.equals("Lscala/reflect/ScalaSignature;")) {
                     if (sigAnnotation != -1)
                         throw new CtxException("Multiple ScalaSignature annotations found in: " + path);
@@ -139,15 +163,44 @@ class ScalaSigClass {
      * @return the (possibly updated) class byte code
      */
     public byte[] getBytes() {
+    	ArrayList<String> splits = splits(Encoding.encode(sig.asBytes()));
+    	
         // Update annotation
         if (sigAnnotation != -1) {
-            setAnnotation(_clazz, sigAnnotation, Encoding.encode(sig.asBytes()));
+        	if (splits.size()==1){
+        		setAnnotation(_clazz, sigAnnotation, splits.get(0));
+        	}else{
+        		setAnnotation(_clazz, sigAnnotation, splits);
+        	}
         }
 
         // Convert to byte code
         ClassWriter cw = new ClassWriter(0);
         _clazz.accept(cw);
         return cw.toByteArray();
+    }
+    
+    /* According to: http://www.scala-lang.org/old/sites/default/files/sids/dubochet/Mon,%202010-05-31,%2015:25/Storage%20of%20pickled%20Scala%20signatures%20in%20class%20files.pdf
+     * MAX_SPLIT_SIZE should be 65535
+     * Yet for my case it didn't work.
+     * Tried a couple of other values, 50000 seems to work. */
+    private static final int MAX_SPLIT_SIZE = 50000;//65505;//65535;
+    private ArrayList<String> splits(String encoded){
+    	
+    	ArrayList<String> splits = new ArrayList<String>();
+    	int splitCount = (encoded.length()/MAX_SPLIT_SIZE) + 1;
+    	for(int i=0;i<splitCount;i++){
+    		splits.add(
+    			encoded.substring(
+    				i*MAX_SPLIT_SIZE, 
+    				Math.min(
+    					(i+1)*MAX_SPLIT_SIZE,
+    					encoded.length()
+    				)
+    			)
+    		);
+    	}
+    	return splits;
     }
 
     @SuppressWarnings("unchecked")
@@ -156,7 +209,7 @@ class ScalaSigClass {
     }
 
     @SuppressWarnings("unchecked")
-    private static void setAnnotation(ClassNode clazz, int index, String content) {
+    private static <T> void setAnnotation(ClassNode clazz, int index, T content) {
         visibleAnnotations(clazz).get(index).values.set(1, content);
     }
 }
