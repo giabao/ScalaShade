@@ -34,6 +34,9 @@ import java.util.List;
  */
 class ScalaSigClass {
 
+    public static final String SCALA_LONG_SIGNATURE_DESC = "Lscala/reflect/ScalaLongSignature;";
+    public static final String SCALA_SIGNATURE_DESC = "Lscala/reflect/ScalaSignature;";
+
     private final ClassNode _clazz = new ClassNode();
     private int sigAnnotation = -1;
     private ScalaSig sig = null;
@@ -84,7 +87,7 @@ class ScalaSigClass {
         if (_clazz.visibleAnnotations != null) {
             //noinspection unchecked
             for (AnnotationNode an : visibleAnnotations(_clazz)) {
-                if (an.desc.equals("Lscala/reflect/ScalaLongSignature;")) {
+                if (an.desc.equals(SCALA_LONG_SIGNATURE_DESC)) {
                 	//System.out.println(an.values.get(0));
                 	//System.out.println(an.values.get(1).getClass());
                 	if (sigAnnotation != -1)
@@ -109,7 +112,7 @@ class ScalaSigClass {
                         throw new CtxException("ScalaSignature could not be decoded in" + path);
                     sig = ScalaSig.parse(sigBytes);
                     sigAnnotation = at;
-                } else if (an.desc.equals("Lscala/reflect/ScalaSignature;")) {
+                } else if (an.desc.equals(SCALA_SIGNATURE_DESC)) {
                     if (sigAnnotation != -1)
                         throw new CtxException("Multiple ScalaSignature annotations found in: " + path);
                     if (an.values.size() != 2)
@@ -212,8 +215,9 @@ class ScalaSigClass {
     @SuppressWarnings("unchecked")
     private static <T> void setAnnotation(ClassNode clazz, int index, T content) {
         AnnotationNode an = visibleAnnotations(clazz).get(index);
-        if (content instanceof List && an.desc.equals("Lscala/reflect/ScalaSignature;")) {
-            throw new CtxException("Can't store ScalaLongSignature content in a ScalaSignature annotation");
+        if (content instanceof List && an.desc.equals(SCALA_SIGNATURE_DESC)) {
+            AnnotationNode longAN = new AnnotationNode(SCALA_LONG_SIGNATURE_DESC);
+            longAN.values = Arrays.asList("bytes", content);
         } else {
             an.values.set(1, content);
         }
