@@ -26,6 +26,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -210,6 +211,12 @@ class ScalaSigClass {
 
     @SuppressWarnings("unchecked")
     private static <T> void setAnnotation(ClassNode clazz, int index, T content) {
-        visibleAnnotations(clazz).get(index).values.set(1, content);
+        AnnotationNode an = visibleAnnotations(clazz).get(index);
+        if (content instanceof List && an.desc.equals("Lscala/reflect/ScalaSignature;")) {
+            throw new CtxException("Can't store ScalaLongSignature content in a ScalaSignature annotation");
+        } else {
+            an.values.set(1, content);
+        }
     }
+
 }
