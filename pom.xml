@@ -4,7 +4,7 @@
 
     <groupId>uk.org.keng</groupId>
     <artifactId>scalashade</artifactId>
-    <version>0.2</version>
+    <version>0.3.2</version>
     <packaging>jar</packaging>
 
     <name>scalashade</name>
@@ -14,13 +14,21 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <ver.asm>7.1</ver.asm>
     </properties>
 
     <dependencies>
+
         <dependency>
             <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-all</artifactId>
-            <version>5.0.4</version>
+            <artifactId>asm</artifactId>
+            <version>${ver.asm}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-tree</artifactId>
+            <version>${ver.asm}</version>
         </dependency>
 
         <dependency>

@@ -34,8 +34,8 @@ import java.util.List;
  */
 class ScalaSigClass {
 
-    public static final String SCALA_LONG_SIGNATURE_DESC = "Lscala/reflect/ScalaLongSignature;";
-    public static final String SCALA_SIGNATURE_DESC = "Lscala/reflect/ScalaSignature;";
+    private static final String SCALA_LONG_SIGNATURE_DESC = "Lscala/reflect/ScalaLongSignature;";
+    private static final String SCALA_SIGNATURE_DESC = "Lscala/reflect/ScalaSignature;";
 
     private final ClassNode _clazz = new ClassNode();
     private int sigAnnotation = -1;
@@ -187,8 +187,8 @@ class ScalaSigClass {
     /* According to: http://www.scala-lang.org/old/sites/default/files/sids/dubochet/Mon,%202010-05-31,%2015:25/Storage%20of%20pickled%20Scala%20signatures%20in%20class%20files.pdf
      * MAX_SPLIT_SIZE should be 65535
      * Yet for my case it didn't work.
-     * Tried a couple of other values, 50000 seems to work. */
-    private static final int MAX_SPLIT_SIZE = 50000;//65505;//65535;
+     * The largest number that works for okapi shade use case is 65498. */
+    private static final int MAX_SPLIT_SIZE = 65498;
     private ArrayList<String> splits(String encoded){
     	
     	ArrayList<String> splits = new ArrayList<String>();
@@ -207,12 +207,10 @@ class ScalaSigClass {
     	return splits;
     }
 
-    @SuppressWarnings("unchecked")
     private static List<AnnotationNode> visibleAnnotations(ClassNode clazz) {
-        return (List<AnnotationNode>)clazz.visibleAnnotations;
+        return clazz.visibleAnnotations;
     }
 
-    @SuppressWarnings("unchecked")
     private static <T> void setAnnotation(ClassNode clazz, int index, T content) {
         AnnotationNode an = visibleAnnotations(clazz).get(index);
         if (content instanceof List && an.desc.equals(SCALA_SIGNATURE_DESC)) {
