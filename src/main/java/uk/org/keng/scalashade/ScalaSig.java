@@ -40,7 +40,14 @@ import java.util.*;
  */
 class TblTypeID {
     final static int TERM_NAME_ID = 1;
+    final static int TYPE_NAME_ID = 2;
+    final static int CLASS_SYM_ID = 6;
+    final static int VAL_SYM_ID = 8;
+    final static int EXT_REF_ID = 9;
     final static int EXT_MOD_CLASS_REF_ID = 10;
+    final static int THIS_TPE_ID = 13;
+    final static int TYPE_REF_TYPE_ID = 16;
+    final static int POLYT_TPE_ID = 21;
 }
 
 /**
@@ -61,9 +68,20 @@ interface TableEntry {
  * we are interested in are decoded and indexed. Methods are provided for renaming a namespace.
  */
 class Table {
-    private final List<TableEntry> entries = new ArrayList<TableEntry>();
-    private final HashMap<Integer, ExtModClassRefEntry> extModClassRefEntriesMap = new HashMap<Integer, ExtModClassRefEntry>();
-    private final HashMap<Integer, TermNameEntry> termNameMap = new HashMap<Integer, TermNameEntry>();
+    final List<TableEntry> entries = new ArrayList<>();
+
+    final HashMap<Integer, TermNameEntry> termNameMap = new HashMap<>();
+    final HashMap<Integer, TypeNameEntry> typeNameMap = new HashMap<>();
+    final HashMap<Integer, ClassSymEntry> classSymMap = new HashMap<>();
+    final HashMap<Integer, ValSymEntry> valSymMap = new HashMap<>();
+    final HashMap<Integer, PolytTpeEntry> polytTpeMap = new HashMap<>();
+    final HashMap<Integer, TypeRefTpeEntry> typeRefTpeMap = new HashMap<>();
+    final HashMap<Integer, ThisTpeEntry> thisTpeMap = new HashMap<>();
+    final HashMap<Integer, ExtRefEntry> extRefMap = new HashMap<>();
+
+    final HashMap<Integer, ExtModClassRefEntry> extModClassRefEntriesMap = new HashMap<>();
+
+
 
     /**
      * Create a new table entry from its type & raw bytes.
@@ -78,10 +96,45 @@ class Table {
                 entries.add(term);
                 termNameMap.put(entries.size() - 1, term);
                 break;
+            case TblTypeID.TYPE_NAME_ID:
+                TypeNameEntry tpe = new TypeNameEntry(raw);
+                entries.add(tpe);
+                typeNameMap.put(entries.size() - 1, tpe);
+                break;
+            case TblTypeID.CLASS_SYM_ID:
+                ClassSymEntry classSymEntry = new ClassSymEntry(raw);
+                entries.add(classSymEntry);
+                classSymMap.put(entries.size() - 1, classSymEntry);
+                break;
+            case TblTypeID.VAL_SYM_ID:
+                ValSymEntry valSymEntry = new ValSymEntry(raw);
+                entries.add(valSymEntry);
+                valSymMap.put(entries.size() - 1, valSymEntry);
+                break;
+            case TblTypeID.POLYT_TPE_ID:
+                PolytTpeEntry polytTpeEntry = new PolytTpeEntry(raw);
+                entries.add(polytTpeEntry);
+                polytTpeMap.put(entries.size() - 1, polytTpeEntry);
+                break;
             case TblTypeID.EXT_MOD_CLASS_REF_ID:
                 ExtModClassRefEntry classRef = new ExtModClassRefEntry(raw);
                 entries.add(classRef);
                 extModClassRefEntriesMap.put(entries.size() - 1, classRef);
+                break;
+            case TblTypeID.TYPE_REF_TYPE_ID:
+                TypeRefTpeEntry typeRefTpeEntry = new TypeRefTpeEntry(raw);
+                entries.add(typeRefTpeEntry);
+                typeRefTpeMap.put(entries.size() - 1, typeRefTpeEntry);
+                break;
+            case TblTypeID.THIS_TPE_ID:
+                ThisTpeEntry thisTpeEntry = new ThisTpeEntry(raw);
+                entries.add(thisTpeEntry);
+                thisTpeMap.put(entries.size() - 1, thisTpeEntry);
+                break;
+            case TblTypeID.EXT_REF_ID:
+                ExtRefEntry extRefEntry = new ExtRefEntry(raw);
+                entries.add(extRefEntry);
+                extRefMap.put(entries.size() - 1, extRefEntry);
                 break;
             default:
                 entries.add(new RawEntry(type, raw));
@@ -195,6 +248,34 @@ class Table {
     }
 }
 
+// SymbolInfo     = name_Ref owner_Ref flags_LongNat [privateWithin_Ref] info_Ref
+class SymbolInfo {
+    private final int _nameRef;
+    private final int _ownerRef;
+
+    public SymbolInfo(byte[] raw) {
+        ByteArrayInputStream in = new ByteArrayInputStream(raw);
+        _nameRef = Nat.read(in);
+        _ownerRef = Nat.read(in);
+    }
+
+    public int getNameRef() {
+        return _nameRef;
+    }
+
+    public int getOwnerRef() {
+        return _ownerRef;
+    }
+
+    @Override
+    public String toString() {
+        return "SymbolInfo{" +
+                "_nameRef=" + _nameRef +
+                ", _ownerRef=" + _ownerRef +
+                '}';
+    }
+}
+
 /**
  * Generic container for a table entry, just holds on to raw bytes and does not attempt decoding.
  */
@@ -234,6 +315,116 @@ class RawEntry implements TableEntry {
                 sb.append(".");
         }
         return sb.toString();
+    }
+}
+
+class ClassSymEntry extends RawEntry {
+
+    private SymbolInfo symbolInfo;
+
+    ClassSymEntry(byte[] raw) {
+        super(TblTypeID.CLASS_SYM_ID, raw);
+        this.symbolInfo = new SymbolInfo(raw);
+    }
+
+    SymbolInfo getSymbolInfo() {
+        return symbolInfo;
+    }
+
+    @Override
+    public String toString() {
+        return "ClassSymEntry{" +
+                "symbolInfo=" + symbolInfo +
+                '}';
+    }
+}
+
+// TODO: not sure if we should unpickle defaultGetterRef, table makes sense without it
+// 8 VALsym len_Nat [defaultGetter_Ref /* no longer needed*/] SymbolInfo [alias_Ref]
+class ValSymEntry extends RawEntry {
+
+    private final SymbolInfo symbolInfo;
+
+    ValSymEntry(byte[] raw) {
+        super(TblTypeID.VAL_SYM_ID, raw);
+        symbolInfo = new SymbolInfo(raw);
+    }
+
+    @Override
+    public String toString() {
+        return "ValSymEntry{" +
+                "symbolInfo=" + symbolInfo +
+                '}';
+    }
+}
+
+// 9 EXTref len_Nat name_Ref [owner_Ref]
+class ExtRefEntry extends RawEntry {
+    private final int nameRef;
+
+    public ExtRefEntry(byte[] raw) {
+        super(TblTypeID.EXT_REF_ID, raw);
+        nameRef = new ByteArrayInputStream(raw).read();
+    }
+
+    @Override
+    public String toString() {
+        return "ExtRefEntry{" +
+                "nameRef=" + nameRef +
+                '}';
+    }
+}
+
+// 21 POLYTtpe len_Nat tpe_Ref {sym_Ref}
+class PolytTpeEntry extends RawEntry {
+
+    private final int tpeRef;
+
+    PolytTpeEntry(byte[] raw) {
+        super(TblTypeID.POLYT_TPE_ID, raw);
+        tpeRef = new ByteArrayInputStream(raw).read();
+    }
+
+    @Override
+    public String toString() {
+        return "PolytTpeEntry{" +
+                "tpeRef=" + tpeRef +
+                '}';
+    }
+}
+
+// 16 TYPEREFtpe len_Nat type_Ref sym_Ref {targ_Ref}
+class TypeRefTpeEntry extends RawEntry {
+
+    private final int typeRef;
+
+    TypeRefTpeEntry(byte[] raw) {
+        super(TblTypeID.TYPE_REF_TYPE_ID, raw);
+        this.typeRef = new ByteArrayInputStream(raw).read();
+    }
+
+    @Override
+    public String toString() {
+        return "TypeRefTpeEntry{" +
+                "typeRef=" + typeRef +
+                '}';
+    }
+}
+
+// 13 THIStpe len_Nat sym_Ref
+class ThisTpeEntry extends RawEntry {
+    private final int symRef;
+
+    public ThisTpeEntry(byte[] raw) {
+        super(TblTypeID.THIS_TPE_ID, raw);
+        this.symRef = new ByteArrayInputStream(raw).read();
+    }
+
+    @Override
+    public String toString() {
+        return "ThisTpeEntry{" +
+                "symRef=" + symRef +
+                '}';
     }
 }
 
@@ -308,7 +499,10 @@ class ExtModClassRefEntry implements TableEntry {
 
     @Override
     public String toString() {
-        return "Type=extModClassRef " + "nameRef=" + _nameRef + " _symbolRef=" + _symbolRef;
+        return "ExtModClassRefEntry{" +
+                "_nameRef=" + _nameRef +
+                ", _symbolRef=" + _symbolRef +
+                '}';
     }
 }
 
@@ -350,8 +544,57 @@ class TermNameEntry implements TableEntry {
         bos.write(bytes);
     }
 
+    @Override
     public String toString() {
-        return "Type=termName name=" + _name;
+        return "TermNameEntry{" +
+                "_name='" + _name + '\'' +
+                '}';
+    }
+}
+
+/**
+ * Container for TypeName entries. This just contains a UTF-8 encoded string.
+ */
+class TypeNameEntry implements TableEntry {
+    private final String _name;
+
+    /**
+     * Construct from string
+     * @param name the name
+     */
+    TypeNameEntry(String name) {
+        _name = name;
+    }
+
+    /**
+     * Construct from raw bytes
+     * @param raw raw bytes to construct from
+     */
+    TypeNameEntry(byte[] raw) {
+        _name = new String(raw, StandardCharsets.UTF_8);
+    }
+
+    String name() {
+        return _name;
+    }
+
+    /**
+     * Write entry back to a stream
+     * @param bos stream to write to
+     * @throws IOException
+     */
+    public void write(ByteArrayOutputStream bos) throws IOException {
+        bos.write(TblTypeID.TYPE_NAME_ID);
+        byte[] bytes = _name.getBytes(StandardCharsets.UTF_8);
+        Nat.write(bytes.length, bos);
+        bos.write(bytes);
+    }
+
+    @Override
+    public String toString() {
+        return "TypeNameEntry{" +
+                "_name='" + _name + '\'' +
+                '}';
     }
 }
 
@@ -405,6 +648,11 @@ class ScalaSig {
                 throw new CtxException("Unexpected EOF in signature data");
             }
             table.addEntry(type, raw);
+        }
+
+        System.out.println("all entries");
+        for (int i = 0; i < table.entries.size(); i++) {
+            System.out.println(i + ": " + table.entries.get(i));
         }
 
         // The input stream should be consumed at this point but a 'feature' of the encoding is
