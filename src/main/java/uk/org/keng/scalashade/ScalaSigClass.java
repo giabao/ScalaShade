@@ -85,55 +85,53 @@ class ScalaSigClass {
         // Extract ScalaSignature annotation bytes & check all looks OK
         int at = 0;
         if (_clazz.visibleAnnotations != null) {
-            //noinspection unchecked
             for (AnnotationNode an : visibleAnnotations(_clazz)) {
                 if (an.desc.equals(SCALA_LONG_SIGNATURE_DESC)) {
-                	//System.out.println(an.values.get(0));
-                	//System.out.println(an.values.get(1).getClass());
-                	if (sigAnnotation != -1)
-                        throw new CtxException("Multiple ScalaSignature annotations found in: " + path);
-                    if (an.values.size() != 2)
-                        throw new CtxException("ScalaSignature has wrong number of values in: " + path);
-                    if (!(an.values.get(0) instanceof String))
-                        throw new CtxException("ScalaSignature has wrong type for value 0 in: " + path);
-                    if (!(an.values.get(1) instanceof List))
-                        throw new CtxException("ScalaSignature has wrong type for value 1 in: " + path);
-                    if (!an.values.get(0).equals("bytes"))
-                        throw new CtxException("ScalaSignature has wrong first value in" + path);
-                    List<String> parts = (List<String>) an.values.get(1);
-                    String sigString = "";
-                    for(String part : parts){
-                    	System.out.println(part.length());
-                    	sigString += part;
-                    }
-
-                    byte[] sigBytes = Encoding.decode(sigString);
-                    if (sigBytes == null)
-                        throw new CtxException("ScalaSignature could not be decoded in" + path);
-                    sig = ScalaSig.parse(sigBytes);
+                    validateSignature(an, path);
+                    loadSignature(an, path);
                     sigAnnotation = at;
                 } else if (an.desc.equals(SCALA_SIGNATURE_DESC)) {
-                    if (sigAnnotation != -1)
-                        throw new CtxException("Multiple ScalaSignature annotations found in: " + path);
-                    if (an.values.size() != 2)
-                        throw new CtxException("ScalaSignature has wrong number of values in: " + path);
-                    if (!(an.values.get(0) instanceof String))
-                        throw new CtxException("ScalaSignature has wrong type for value 0 in: " + path);
-                    if (!(an.values.get(1) instanceof String))
-                        throw new CtxException("ScalaSignature has wrong type for value 1 in: " + path);
-                    if (!an.values.get(0).equals("bytes"))
-                        throw new CtxException("ScalaSignature has wrong first value in" + path);
-                    String sigString = (String) an.values.get(1);
-
-                    byte[] sigBytes = Encoding.decode(sigString);
-                    if (sigBytes == null)
-                        throw new CtxException("ScalaSignature could not be decoded in" + path);
-                    sig = ScalaSig.parse(sigBytes);
+                    validateSignature(an, path);
+                    loadSignature(an, path);
                     sigAnnotation = at;
                 }
                 at++;
             }
         }
+    }
+
+    private void validateSignature(AnnotationNode annotation, String path) {
+        if (sigAnnotation != -1)
+            throw new CtxException("Multiple ScalaSignature annotations found in: " + path);
+        if (annotation.values.size() != 2)
+            throw new CtxException("ScalaSignature has wrong number of values in: " + path);
+        if (!(annotation.values.get(0) instanceof String))
+            throw new CtxException("ScalaSignature has wrong type for value 0 in: " + path);
+        if (!annotation.values.get(0).equals("bytes"))
+            throw new CtxException("ScalaSignature has wrong first value in " + path);
+    }
+
+    private void loadSignature(AnnotationNode annotation, String path) {
+        String signatureString = "";
+        if (annotation.desc.equals(SCALA_LONG_SIGNATURE_DESC)) {
+            if (!(annotation.values.get(1) instanceof List)) {
+                throw new CtxException("ScalaSignature has wrong type for value 1 in: " + path);
+            }
+            for (String part : ((List<String>) annotation.values.get(1))) {
+                System.out.println(part.length());
+                signatureString += part;
+            }
+        } else {
+            if (!(annotation.values.get(1) instanceof String)) {
+                throw new CtxException("ScalaSignature has wrong type for value 1 in: " + path);
+            }
+            signatureString = (String) annotation.values.get(1);
+        }
+        byte[] signatureBytes = Encoding.decode(signatureString);
+        if (null == signatureBytes) {
+            throw new CtxException("ScalaSignature could not be decoded in " + path);
+        }
+        sig = ScalaSig.parse(signatureBytes);
     }
 
     /**
@@ -168,14 +166,14 @@ class ScalaSigClass {
      */
     public byte[] getBytes() {
     	ArrayList<String> splits = splits(Encoding.encode(sig.asBytes()));
-    	
+
         // Update annotation
         if (sigAnnotation != -1) {
-        	if (splits.size()==1){
-        		setAnnotation(_clazz, sigAnnotation, splits.get(0));
-        	}else{
-        		setAnnotation(_clazz, sigAnnotation, splits);
-        	}
+            if (splits.size() == 1) {
+                setAnnotation(_clazz, sigAnnotation, splits.get(0));
+            } else {
+                setAnnotation(_clazz, sigAnnotation, splits);
+            }
         }
 
         // Convert to byte code
@@ -187,11 +185,11 @@ class ScalaSigClass {
     /* According to: http://www.scala-lang.org/old/sites/default/files/sids/dubochet/Mon,%202010-05-31,%2015:25/Storage%20of%20pickled%20Scala%20signatures%20in%20class%20files.pdf
      * MAX_SPLIT_SIZE should be 65535
      * Yet for my case it didn't work.
-     * The largest number that works for okapi shade use case is 65498. */
-    private static final int MAX_SPLIT_SIZE = 65498;
+     * The largest number that works for okapi shade use case is 65493. */
+    private static final int MAX_SPLIT_SIZE = 65493;
     private ArrayList<String> splits(String encoded){
     	
-    	ArrayList<String> splits = new ArrayList<String>();
+    	ArrayList<String> splits = new ArrayList<>();
     	int splitCount = (encoded.length()/MAX_SPLIT_SIZE) + 1;
     	for(int i=0;i<splitCount;i++){
     		splits.add(
