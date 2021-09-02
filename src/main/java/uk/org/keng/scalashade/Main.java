@@ -65,14 +65,14 @@ public class Main {
                 ScalaSigClass sigClass = new ScalaSigClass(in);
                 ScalaSig sig = sigClass.getSig();
                 if (sig!=null && debug) {
-                    System.err.println(sig.toString());
+                    System.err.println(sig);
                 }
                 if (sig != null && sig.replace(from, to) > 0) {
                     sigClass.writeTo(out);
                     if (verbose)
                         System.out.println("Modified:  " + in);
                     if (debug)
-                        System.err.println(sig.toString());
+                        System.err.println(sig);
                 } else {
                     FileUtil.copyFile(inFile, new File(out));
                 }

@@ -86,14 +86,12 @@ class ScalaSigClass {
         int at = 0;
         if (_clazz.visibleAnnotations != null) {
             for (AnnotationNode an : visibleAnnotations(_clazz)) {
-                if (an.desc.equals(SCALA_LONG_SIGNATURE_DESC)) {
-                    validateSignature(an, path);
-                    loadSignature(an, path);
-                    sigAnnotation = at;
-                } else if (an.desc.equals(SCALA_SIGNATURE_DESC)) {
-                    validateSignature(an, path);
-                    loadSignature(an, path);
-                    sigAnnotation = at;
+                switch (an.desc) {
+                    case SCALA_LONG_SIGNATURE_DESC:
+                    case SCALA_SIGNATURE_DESC:
+                        validateSignature(an, path);
+                        sig = loadSignature(an, path);
+                        sigAnnotation = at;
                 }
                 at++;
             }
@@ -111,7 +109,7 @@ class ScalaSigClass {
             throw new CtxException("ScalaSignature has wrong first value in " + path);
     }
 
-    private void loadSignature(AnnotationNode annotation, String path) {
+    private ScalaSig loadSignature(AnnotationNode annotation, String path) {
         String signatureString = "";
         if (annotation.desc.equals(SCALA_LONG_SIGNATURE_DESC)) {
             if (!(annotation.values.get(1) instanceof List)) {
@@ -131,7 +129,7 @@ class ScalaSigClass {
         if (null == signatureBytes) {
             throw new CtxException("ScalaSignature could not be decoded in " + path);
         }
-        sig = ScalaSig.parse(signatureBytes);
+        return ScalaSig.parse(signatureBytes);
     }
 
     /**
