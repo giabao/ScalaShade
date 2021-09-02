@@ -34,8 +34,8 @@ import java.util.List;
  */
 class ScalaSigClass {
 
-    private static final String SCALA_LONG_SIGNATURE_DESC = "Lscala/reflect/ScalaLongSignature;";
-    private static final String SCALA_SIGNATURE_DESC = "Lscala/reflect/ScalaSignature;";
+    private static final String SCALA_LONG_SIGNATURE_DESC = "Lshaded/scala/reflect/ScalaLongSignature;";
+    private static final String SCALA_SIGNATURE_DESC = "Lshaded/scala/reflect/ScalaSignature;";
 
     private final ClassNode _clazz = new ClassNode();
     private int sigAnnotation = -1;
@@ -163,6 +163,7 @@ class ScalaSigClass {
      * @return the (possibly updated) class byte code
      */
     public byte[] getBytes() {
+        /*
     	ArrayList<String> splits = splits(Encoding.encode(sig.asBytes()));
 
         // Update annotation
@@ -171,6 +172,16 @@ class ScalaSigClass {
                 setAnnotation(_clazz, sigAnnotation, splits.get(0));
             } else {
                 setAnnotation(_clazz, sigAnnotation, splits);
+            }
+        }
+        */
+        if (sigAnnotation != -1) {
+            visibleAnnotations(_clazz).remove(sigAnnotation);
+            for (int i = 0; i < _clazz.attrs.size(); i++) {
+                if (_clazz.attrs.get(i).type.equals("ScalaSig")) {
+                    _clazz.attrs.remove(i);
+                    break;
+                }
             }
         }
 
