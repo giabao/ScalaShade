@@ -177,10 +177,12 @@ class ScalaSigClass {
         */
         if (sigAnnotation != -1) {
             visibleAnnotations(_clazz).remove(sigAnnotation);
-            for (int i = 0; i < _clazz.attrs.size(); i++) {
-                if (_clazz.attrs.get(i).type.equals("ScalaSig")) {
-                    _clazz.attrs.remove(i);
-                    break;
+            if (_clazz.attrs != null) {
+                for (int i = 0; i < _clazz.attrs.size(); i++) {
+                    if (_clazz.attrs.get(i).type.equals("ScalaSig")) {
+                        _clazz.attrs.remove(i);
+                        break;
+                    }
                 }
             }
         }
