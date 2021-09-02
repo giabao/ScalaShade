@@ -34,8 +34,8 @@ import java.util.List;
  */
 class ScalaSigClass {
 
-    private static final String SCALA_LONG_SIGNATURE_DESC = "Lshaded/scala/reflect/ScalaLongSignature;";
-    private static final String SCALA_SIGNATURE_DESC = "Lshaded/scala/reflect/ScalaSignature;";
+    private static final String SCALA_LONG_SIGNATURE_DESC = "Lscala211/reflect/ScalaLongSignature;";
+    private static final String SCALA_SIGNATURE_DESC = "Lscala211/reflect/ScalaSignature;";
 
     private final ClassNode _clazz = new ClassNode();
     private int sigAnnotation = -1;
